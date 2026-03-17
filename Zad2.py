@@ -1,1 +1,0 @@
-print("Nazwa grupy: ZPI3\nSCRUM Master: IgorKawalec")
