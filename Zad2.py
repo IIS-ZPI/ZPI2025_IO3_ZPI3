@@ -20,7 +20,3 @@ def division(a,b):
 def modulus(a,b):
     return a%b
 #drugi komentarz
-
-
-
-#dowolny komentarz
