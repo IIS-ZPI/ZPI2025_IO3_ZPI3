@@ -6,7 +6,7 @@ print("arcturusvy")
 
 def multiplication(a, b):
     return a * b
-
+#pierwszy komentarz
 def difference(a,b):
     return a-b
 
