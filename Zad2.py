@@ -11,5 +11,5 @@ def multiplication(a, b):
 def difference(a,b):
     return a-b
 
-def Addition(a, b):
+def addition(a, b):
     return a+b
