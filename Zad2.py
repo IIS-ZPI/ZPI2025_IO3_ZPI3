@@ -4,6 +4,7 @@ print("dtchorzewski")
 print("IgorTypinski")
 print("arcturusvy")
 
+# returns the result of a and b multiplication
 def multiplication(a, b):
     return a * b
 
