@@ -10,3 +10,8 @@ def multiplication(a, b):
 
 def difference(a,b):
     return a-b
+
+
+def division(a,b):
+    if b == 0: return
+    return a/b
