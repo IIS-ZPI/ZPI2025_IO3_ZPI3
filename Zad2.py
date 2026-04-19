@@ -18,7 +18,7 @@ def division(a,b):
     return a/b
 
 
-
+# module function
 def modulus(a,b):
     # a, b - function params
 
