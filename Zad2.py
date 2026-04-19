@@ -14,9 +14,12 @@ def difference(a,b):
 def addition(a, b):
     return a+b
 
+# returns the result of a and b division
 def division(a,b):
     if b == 0: return
     return a/b
 
 def modulus(a,b):
     return a%b
+
+# random comment
