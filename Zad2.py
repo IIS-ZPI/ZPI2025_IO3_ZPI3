@@ -10,7 +10,6 @@ def multiplication(a, b):
 def difference(a,b):
     return a-b
 
-# comment zad6 251206
 def addition(a, b):
     return a+b
 
