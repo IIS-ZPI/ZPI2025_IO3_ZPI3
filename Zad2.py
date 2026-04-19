@@ -17,6 +17,11 @@ def division(a,b):
     if b == 0: return
     return a/b
 
+
+# module function
 def modulus(a,b):
+    # a, b - function params
+
     return a%b
-#drugi komentarz
+    # return statement
+
