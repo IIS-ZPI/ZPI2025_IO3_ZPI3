@@ -16,3 +16,6 @@ def addition(a, b):
 def division(a,b):
     if b == 0: return
     return a/b
+
+def modulus(a,b):
+    return a%b
