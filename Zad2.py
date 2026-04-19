@@ -9,7 +9,9 @@ def multiplication(a, b):
 
 def difference(a,b):
     return a-b
+
 #251237_kom1
+#251237 kom2
 def addition(a, b):
     return a+b
 
