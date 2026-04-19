@@ -17,5 +17,11 @@ def division(a,b):
     if b == 0: return
     return a/b
 
-def modulus(a,b): # a, b - function params
+
+
+def modulus(a,b):
+    # a, b - function params
+
+
+
     return a%b
