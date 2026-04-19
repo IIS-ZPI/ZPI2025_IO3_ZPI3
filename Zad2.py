@@ -12,6 +12,8 @@ def difference(a,b):
 
 #251237_kom1
 #251237 kom2
+#251237 kom3
+
 def addition(a, b):
     return a+b
 
