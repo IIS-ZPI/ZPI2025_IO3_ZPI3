@@ -1,6 +1,6 @@
 print("Nazwa grupy: ZPI3\nScrum Master: IgorKawalec")
 print("251206")
-print("dtchorzewski")
+print("dtchorzewski") #trzeci komentarz
 print("IgorTypinski")
 print("arcturusvy")
 
@@ -19,3 +19,4 @@ def division(a,b):
 
 def modulus(a,b):
     return a%b
+#drugi komentarz
