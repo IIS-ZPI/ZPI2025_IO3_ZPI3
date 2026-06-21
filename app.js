@@ -759,6 +759,6 @@ if (typeof module !== 'undefined') {
 }
 
 // Only instantiate in the browser
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && typeof process === 'undefined') {
   window.ui = new UIController();
 }
