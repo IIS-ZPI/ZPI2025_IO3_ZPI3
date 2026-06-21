@@ -251,6 +251,10 @@ describe('CSVExporter Tests', () => {
   });
 });
 
+/**
+ * @jest-environment jsdom
+ */
+
 const { UIController } = require('./app.js');
 
 describe('End-to-End User Flow Simulation', () => {
