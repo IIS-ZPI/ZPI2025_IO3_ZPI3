@@ -1,0 +1,58 @@
+name: Release & Deploy
+
+on:
+  push:
+    branches:
+      - release
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.tagger.outputs.new_tag }}
+    steps:
+      - name: Get code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+
+      - name: Generate new tag
+        id: tagger
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: minor
+
+      - name: Create release on GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tagger.outputs.new_tag }}
+          name: Version ${{ steps.tagger.outputs.new_tag }}
+          body: "Automatically generated release."
+
+  deploy-pages:
+    needs: release
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Get code
+        uses: actions/checkout@v4
+
+      - name: GitHub Pages configuration
+        uses: actions/configure-pages@v5
+
+      - name: Building
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deployment on GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
