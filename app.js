@@ -415,6 +415,7 @@ class UIController {
       status: document.getElementById("status"),
       results: document.getElementById("results"),
       tabs: document.querySelectorAll(".tab"),
+      chart: document.getElementById("chart"),
       chartWrap: document.getElementById("chartWrap"),
       tableWrap: document.getElementById("tableWrap"),
       nbpTableWrap: document.getElementById("nbpTableWrap"),
@@ -530,8 +531,81 @@ class UIController {
     this.exporter.download(csvContent, `nbp-analysis-${this.lastExportData.title}`);
   }
 
+  /**
+   * Executes the analysis flow based on user input.
+   */
+  async run() {
+    this.clearResults();
+    this.setStatus("Fetching data from NBP API...");
+    
+    const type = this.els.analysisType.value;
+    const table = this.els.tableType.value;
+    const code = this.els.currency.value;
+    const codeB = this.els.currencyB.value;
+    const periodDays = parseInt(this.els.period.value, 10);
+    const granularity = this.els.distGran.value;
+    
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - periodDays);
+    const startStr = startDate.toISOString().slice(0, 10);
+    const endStr = endDate.toISOString().slice(0, 10);
+
+    try {
+      this.els.results.hidden = false;
+      this.els.runBtn.disabled = true;
+
+      if (type === "sessions") {
+        const data = await this.analyzer.getSessionAnalysis(table, code, startStr, endStr);
+        this.renderSessions(code, data);
+        this.renderTable(["Date", "Rate", "Change", "Direction"], data.rows.map(r => [r.date, r.value, r.diff.toFixed(4), r.cls]));
+        this.prepareExport(`sessions-${code}`, { headers: ["Date", "Rate", "Change", "Dir"], rows: data.rows.map(r => [r.date, r.value, r.diff, r.cls]) });
+      } 
+      else if (type === "stats") {
+        const { rates, stats } = await this.analyzer.getStatistics(table, code, startStr, endStr);
+        this.renderStats(code, stats);
+        this.drawLineChart(rates, `${code} Rate`);
+        this.renderTable(["Date", "Rate"], rates.map(r => [r.date, r.value]));
+        this.prepareExport(`stats-${code}`, { headers: ["Date", "Rate"], rows: rates.map(r => [r.date, r.value]) });
+      }
+      else if (type === "gold") {
+        const rates = await this.analyzer.nbpService.fetchGold(startStr, endStr);
+        const stats = this.analyzer.analysisService.analyzeStats(rates);
+        const sessions = this.analyzer.analysisService.analyzeSessions(rates);
+        this.renderSessions("Gold", sessions);
+        this.renderStats("Gold", stats);
+        this.renderTable(["Date", "Price (PLN/g)"], rates.map(r => [r.date, r.value]));
+        this.prepareExport("gold", { headers: ["Date", "Price"], rows: rates.map(r => [r.date, r.value]) });
+      }
+      else if (type === "distribution") {
+        const distStart = this.els.startDate.value;
+        const data = await this.analyzer.getDistribution(table, code, codeB, distStart, endStr, granularity);
+        this.drawBarChart(data.bins, `${code}/${codeB} ${granularity} changes distribution`);
+        this.renderTable(["Interval (%)", "Frequency"], data.bins.map(b => [`${b.from.toFixed(2)}% — ${b.to.toFixed(2)}%`, b.count]));
+        this.prepareExport(`dist-${code}-${codeB}`, {headers: ["Period", "Change %"], rows: data.changes.map(c => [c.period, c.change])});
+      }
+
+      this.setStatus("Success.");
+    } catch (e) {
+      this.setStatus(e.message, true);
+    } finally {
+      this.els.runBtn.disabled = false;
+    }
+  }
+
+  /**
+   * Helper to render a data table in the results section.
+   * @param {Array} headers - Table headers.
+   * @param {Array} rows - Table body rows.
+   */
+  renderTable(headers, rows) {
+    const html = `<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
+      <tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+    this.els.tableWrap.innerHTML = html;
+  }
 
   initListeners() {
+    this.els.runBtn.addEventListener("click", () => this.run());
     this.els.tableType.addEventListener("change", () => this.populateCurrencies());
     this.els.analysisType.addEventListener("change", () => this.updateFieldVisibility());
     this.els.tabs.forEach((tab) => {
@@ -611,22 +685,34 @@ class UIController {
     const innerH = H - pad.t - pad.b;
     const bw = innerW / bins.length;
 
+    ctx.clearRect(0, 0, W, H);
+
     bins.forEach((b, i) => {
       const h = (b.count / maxC) * innerH;
       const x = pad.l + i * bw + 4;
       const y = pad.t + innerH - h;
+      
+      // Color coding: Green for positive, Red for negative, Grey for neutral
       const color = b.from >= 0 ? "#16a34a" : (b.to <= 0 ? "#dc2626" : "#64748b");
       
       ctx.fillStyle = color;
       ctx.fillRect(x, y, bw - 8, h);
       
-      ctx.fillStyle = "#64748b"; ctx.font = `${10 * dpr}px sans-serif`;
-      ctx.fillText(`${b.from.toFixed(1)}%`, x, H - 10 * dpr);
+      // Values on top of bars
+      ctx.fillStyle = "#0f172a";
+      ctx.font = `bold ${10 * dpr}px sans-serif`;
+      ctx.fillText(b.count, x + (bw/4), y - 5);
+
+      // X Axis labels (ranges)
+      ctx.fillStyle = "#64748b";
+      ctx.font = `${9 * dpr}px sans-serif`;
+      ctx.fillText(`${b.from.toFixed(1)}%`, x, H - 20 * dpr);
     });
 
     ctx.fillStyle = "#0f172a"; ctx.font = `bold ${14 * dpr}px sans-serif`;
     ctx.fillText(label, pad.l, 20 * dpr);
   }
+
 
   /**
    * Renders the session analysis dashboard.
