@@ -217,3 +217,36 @@ describe('CurrencyAnalyzer Integration Tests', () => {
     expect(dist.changes[0].change).toBe(10); // 4.4/1.0 vs 4.0/1.0 = +10%
   });
 });
+
+const { CSVExporter } = require('./app.js');
+
+describe('CSVExporter Tests', () => {
+  let exporter;
+
+  beforeEach(() => {
+    exporter = new CSVExporter();
+  });
+
+  test('generateCSVString should format headers and rows correctly', () => {
+    const headers = ["Date", "Value"];
+    const rows = [
+      ["2023-01-01", 4.50],
+      ["2023-01-02", 4.60]
+    ];
+
+    const expected = `"Date","Value"\n"2023-01-01","4.5"\n"2023-01-02","4.6"`;
+    const result = exporter.generateCSVString(headers, rows);
+
+    expect(result).toBe(expected);
+  });
+
+  test('generateCSVString should escape double quotes within cells', () => {
+    const headers = ["ID", "Comment"];
+    const rows = [[1, 'This is a "quoted" comment']];
+
+    const expected = `"ID","Comment"\n"1","This is a ""quoted"" comment"`;
+    const result = exporter.generateCSVString(headers, rows);
+
+    expect(result).toBe(expected);
+  });
+});
