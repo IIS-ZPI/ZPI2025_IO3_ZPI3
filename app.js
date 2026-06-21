@@ -116,6 +116,48 @@ class NBPService {
   }
 }
 
+/**
+ * Service class responsible for processing and analyzing currency data.
+ */
+class AnalysisService {
+  /**
+   * Analyzes sequential exchange rate sessions to determine market trends.
+   * Compares each session to the previous one.
+   * 
+   * @param {Array} rates - Array of rate objects {date, value}.
+   * @returns {Object} An object containing counts (up, down, flat) and detailed rows.
+   */
+  analyzeSessions(rates) {
+    let up = 0, down = 0, flat = 0;
+    const rows = [];
+
+    // We start from the second element to compare it with the previous one
+    for (let i = 1; i < rates.length; i++) {
+      const diff = rates[i].value - rates[i - 1].value;
+      let cls = "flat";
+
+      if (diff > 0) {
+        up++;
+        cls = "up";
+      } else if (diff < 0) {
+        down++;
+        cls = "down";
+      } else {
+        flat++;
+      }
+
+      rows.push({
+        date: rates[i].date,
+        value: rates[i].value,
+        diff: diff,
+        cls: cls
+      });
+    }
+
+    return { up, down, flat, rows };
+  }
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { NBPService, NBPServiceError };
+  module.exports = { NBPService, NBPServiceError, AnalysisService };
 }
