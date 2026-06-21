@@ -121,6 +121,85 @@ class NBPService {
  */
 class AnalysisService {
   /**
+   * Helper to round numbers to 4 decimal places.
+   * @param {number} val - Value to round.
+   * @returns {number} Rounded value.
+   */
+  round(val) {
+    return Math.round((val + Number.EPSILON) * 10000) / 10000;
+  }
+
+  /**
+   * Calculates the median of an array of numbers.
+   * @param {Array<number>} arr - Array of values.
+   * @returns {number} The median value.
+   */
+  median(arr) {
+    const s = [...arr].sort((a, b) => a - b);
+    const m = Math.floor(s.length / 2);
+    const result = s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+    return this.round(result);
+  }
+
+  /**
+   * Calculates the mode (most frequent value) of an array.
+   * Values are grouped by 4-decimal precision strings.
+   * @param {Array<number>} arr - Array of values.
+   * @returns {Object} Object containing the value and its count.
+   */
+  mode(arr) {
+    const counts = new Map();
+    for (const v of arr) {
+      const k = v.toFixed(4);
+      counts.set(k, (counts.get(k) || 0) + 1);
+    }
+    let best = null, bestC = 0;
+    for (const [k, c] of counts) {
+      if (c > bestC) {
+        bestC = c;
+        best = k;
+      }
+    }
+    return { value: parseFloat(best), count: bestC };
+  }
+
+  /**
+   * Calculates standard deviation and mean using the population formula.
+   * @param {Array<number>} arr - Array of values.
+   * @returns {Object} Object containing mean and standard deviation (std).
+   */
+  stddev(arr) {
+    const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+    const variance = arr.reduce((a, b) => a + (b - mean) * (b - mean), 0) / arr.length;
+    return { 
+      mean: this.round(mean), 
+      std: this.round(Math.sqrt(variance)) 
+    };
+  }
+
+  /**
+   * Performs a full statistical analysis on a set of exchange rates.
+   * @param {Array} rates - Array of rate objects {date, value}.
+   * @returns {Object} Full statistical report.
+   */
+  analyzeStats(rates) {
+    const vals = rates.map((r) => r.value);
+    const { mean, std } = this.stddev(vals);
+    const cv = mean !== 0 ? (std / mean) * 100 : 0;
+
+    return {
+      count: vals.length,
+      median: this.median(vals),
+      mode: this.mode(vals),
+      mean: mean,
+      std: std,
+      cv: this.round(cv),
+      min: this.round(Math.min(...vals)),
+      max: this.round(Math.max(...vals))
+    };
+  }
+
+  /**
    * Analyzes sequential exchange rate sessions to determine market trends.
    * Compares each session to the previous one.
    * 
