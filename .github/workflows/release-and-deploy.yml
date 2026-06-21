@@ -28,12 +28,13 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: minor
           release_branches: release
+          tag_prefix: ""
 
       - name: Create release on GitHub
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tagger.outputs.new_tag }}
-          name: Version ${{ steps.tagger.outputs.new_tag }}
+          name: ${{ steps.tagger.outputs.new_tag }}
           body: "Automatically generated release."
 
   deploy-pages:
