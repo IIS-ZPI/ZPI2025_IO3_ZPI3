@@ -39,3 +39,51 @@ describe('NBPService Class Tests', () => {
         }
     });
 });
+
+const { AnalysisService } = require('./app.js');
+
+describe('AnalysisService Class Tests', () => {
+  let analyzer;
+
+  beforeEach(() => {
+    analyzer = new AnalysisService();
+  });
+
+  test('should correctly classify upward, downward, and flat sessions', () => {
+    const rates = [
+      { date: '2023-01-01', value: 4.50 },
+      { date: '2023-01-02', value: 4.60 }, // Up
+      { date: '2023-01-03', value: 4.40 }, // Down
+      { date: '2023-01-04', value: 4.40 }  // Flat
+    ];
+
+    const result = analyzer.analyzeSessions(rates);
+
+    expect(result.up).toBe(1);
+    expect(result.down).toBe(1);
+    expect(result.flat).toBe(1);
+    expect(result.rows.length).toBe(3);
+    expect(result.rows[0].cls).toBe('up');
+    expect(result.rows[2].cls).toBe('flat');
+  });
+
+  test('should return empty results if only one session is provided', () => {
+    const rates = [{ date: '2023-01-01', value: 4.50 }];
+    const result = analyzer.analyzeSessions(rates);
+
+    expect(result.up).toBe(0);
+    expect(result.rows.length).toBe(0);
+  });
+
+  test('should handle all rates being equal (all flat)', () => {
+    const rates = [
+      { date: '2023-01-01', value: 4.0 },
+      { date: '2023-01-02', value: 4.0 },
+      { date: '2023-01-03', value: 4.0 }
+    ];
+    const result = analyzer.analyzeSessions(rates);
+    expect(result.flat).toBe(2);
+    expect(result.up).toBe(0);
+    expect(result.down).toBe(0);
+  });
+});
