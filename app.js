@@ -438,6 +438,10 @@ class UIController {
       ["USD","US Dollar"],["EUR","Euro"],["GBP","British Pound"],["CHF","Swiss Franc"]
     ];
 
+    this.analyzer = new CurrencyAnalyzer();
+    this.exporter = new CSVExporter();
+    this.lastExportData = null;
+
     this.initListeners();
     this.populateCurrencies();
     this.setDefaultDates();
@@ -508,6 +512,133 @@ class UIController {
     this.els.tabs.forEach((tab) => {
       tab.addEventListener("click", () => this.switchView(tab));
     });
+  }
+
+  /**
+   * Clears dynamic result elements before a new run.
+   */
+  clearResults() {
+    document.querySelectorAll(".dyn").forEach((n) => n.remove());
+    this.els.tableWrap.innerHTML = "";
+    const ctx = this.els.chart.getContext("2d");
+    ctx.clearRect(0, 0, this.els.chart.width, this.els.chart.height);
+  }
+
+  /**
+   * Draws a line chart on the canvas.
+   * @param {Array} rates - Data points to plot.
+   * @param {string} label - Chart title.
+   */
+  drawLineChart(rates, label) {
+    const c = this.els.chart;
+    const ctx = c.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const W = c.width = c.clientWidth * dpr;
+    const H = c.height = 380 * dpr;
+
+    const pad = { l: 60 * dpr, r: 20 * dpr, t: 40 * dpr, b: 40 * dpr };
+    const vals = rates.map((r) => r.value);
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const xStep = (W - pad.l - pad.r) / Math.max(1, rates.length - 1);
+    const yScale = (v) => H - pad.b - ((v - min) / (max - min || 1)) * (H - pad.t - pad.b);
+
+    // Grid and Labels
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.fillStyle = "#64748b";
+    ctx.font = `${12 * dpr}px sans-serif`;
+    for (let i = 0; i <= 5; i++) {
+      const y = pad.t + (i * (H - pad.t - pad.b)) / 5;
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+      const v = max - (i * (max - min)) / 5;
+      ctx.fillText(v.toFixed(4), 4, y + 4);
+    }
+
+    // Line
+    ctx.strokeStyle = "#b91c1c"; ctx.lineWidth = 2 * dpr;
+    ctx.beginPath();
+    rates.forEach((r, i) => {
+      const x = pad.l + i * xStep;
+      const y = yScale(r.value);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    ctx.fillStyle = "#0f172a"; ctx.font = `bold ${14 * dpr}px sans-serif`;
+    ctx.fillText(label, pad.l, 20 * dpr);
+  }
+
+  /**
+   * Draws a bar chart/histogram on the canvas.
+   * @param {Array} bins - Data bins with {from, to, count}.
+   * @param {string} label - Chart title.
+   */
+  drawBarChart(bins, label) {
+    const c = this.els.chart;
+    const ctx = c.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const W = c.width = c.clientWidth * dpr;
+    const H = c.height = 380 * dpr;
+
+    const pad = { l: 50 * dpr, r: 20 * dpr, t: 40 * dpr, b: 50 * dpr };
+    const maxC = Math.max(1, ...bins.map((b) => b.count));
+    const innerW = W - pad.l - pad.r;
+    const innerH = H - pad.t - pad.b;
+    const bw = innerW / bins.length;
+
+    bins.forEach((b, i) => {
+      const h = (b.count / maxC) * innerH;
+      const x = pad.l + i * bw + 4;
+      const y = pad.t + innerH - h;
+      const color = b.from >= 0 ? "#16a34a" : (b.to <= 0 ? "#dc2626" : "#64748b");
+      
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, bw - 8, h);
+      
+      ctx.fillStyle = "#64748b"; ctx.font = `${10 * dpr}px sans-serif`;
+      ctx.fillText(`${b.from.toFixed(1)}%`, x, H - 10 * dpr);
+    });
+
+    ctx.fillStyle = "#0f172a"; ctx.font = `bold ${14 * dpr}px sans-serif`;
+    ctx.fillText(label, pad.l, 20 * dpr);
+  }
+
+  /**
+   * Renders the session analysis dashboard.
+   */
+  renderSessions(code, data) {
+    document.getElementById("resultsTitle").textContent = "Trading Session Analysis";
+    const summary = document.createElement("div");
+    summary.className = "session-summary dyn";
+    summary.innerHTML = `
+      <span class="chip up">Upward: <b>${data.up}</b></span>
+      <span class="chip down">Downward: <b>${data.down}</b></span>
+      <span class="chip flat">Unchanged: <b>${data.flat}</b></span>`;
+    document.getElementById("meta").after(summary);
+
+    this.drawBarChart([
+      { from: 1, to: 2, count: data.up },
+      { from: 0, to: 0, count: data.flat },
+      { from: -2, to: -1, count: data.down }
+    ], `Session Outcomes for ${code}`);
+  }
+
+  /**
+   * Renders the statistical grid.
+   */
+  renderStats(code, stats) {
+    document.getElementById("resultsTitle").textContent = "Statistical Measures";
+    const grid = document.createElement("div");
+    grid.className = "stat-grid dyn";
+    const cards = [
+      ["Median", stats.median.toFixed(4)],
+      ["Mean", stats.mean.toFixed(4)],
+      ["StdDev", stats.std.toFixed(4)],
+      ["CV", `${stats.cv.toFixed(2)}%`]
+    ];
+    grid.innerHTML = cards.map(([k, v]) => `
+      <div class="stat-card"><div class="k">${k}</div><div class="v">${v}</div></div>
+    `).join("");
+    document.getElementById("meta").after(grid);
   }
 }
 
