@@ -42,7 +42,7 @@ describe('NBPService Class Tests', () => {
 
 const { AnalysisService } = require('./app.js');
 
-describe('AnalysisService Class Tests', () => {
+describe('AnalysisService Session Tests', () => {
   let analyzer;
 
   beforeEach(() => {
@@ -85,5 +85,48 @@ describe('AnalysisService Class Tests', () => {
     expect(result.flat).toBe(2);
     expect(result.up).toBe(0);
     expect(result.down).toBe(0);
+  });
+});
+
+describe('AnalysisService Statistical Measures Tests', () => {
+  let analyzer;
+
+  beforeEach(() => {
+    analyzer = new AnalysisService();
+  });
+
+  test('median should correctly calculate for odd and even sets', () => {
+    expect(analyzer.median([1, 5, 3])).toBe(3);
+    expect(analyzer.median([1, 2, 3, 4])).toBe(2.5);
+  });
+
+  test('stddev should calculate mean and population standard deviation', () => {
+    const result = analyzer.stddev([10, 10, 10]);
+    expect(result.mean).toBe(10);
+    expect(result.std).toBe(0);
+
+    const diverse = analyzer.stddev([2, 4, 4, 4, 5, 5, 7, 9]);
+    // Mean = 5, Variance = 4, StdDev = 2
+    expect(diverse.mean).toBe(5);
+    expect(diverse.std).toBe(2);
+  });
+
+  test('mode should find the most frequent rounded value', () => {
+    const result = analyzer.mode([1.12344, 1.12341, 5.0, 1.12342]);
+    // Since we group by .toFixed(4), 1.12344, 1.12341, 1.12342 all become "1.1234"
+    expect(result.value).toBe(1.1234);
+    expect(result.count).toBe(3);
+  });
+
+  test('analyzeStats should aggregate all measures correctly', () => {
+    const rates = [
+        { value: 10 }, { value: 20 }, { value: 30 }
+    ];
+    const report = analyzer.analyzeStats(rates);
+    expect(report.mean).toBe(20);
+    expect(report.median).toBe(20);
+    expect(report.cv).toBeGreaterThan(0);
+    expect(report.min).toBe(10);
+    expect(report.max).toBe(30);
   });
 });
