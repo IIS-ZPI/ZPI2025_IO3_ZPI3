@@ -2,7 +2,6 @@
  * @jest-environment jsdom
  */
 
-
 const { NBPService, NBPServiceError, AnalysisService, CurrencyAnalyzer, CSVExporter, UIController } = require('./app.js');
 
 global.fetch = jest.fn();
