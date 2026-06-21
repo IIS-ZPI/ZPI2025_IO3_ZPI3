@@ -506,12 +506,38 @@ class UIController {
     this.els.status.classList.toggle("error", isError);
   }
 
+  /**
+   * Captures the current analysis results for export (Issue #10).
+   * @param {string} title - The title of the analysis.
+   * @param {Object} exportData - Object with headers and rows.
+   */
+  prepareExport(title, exportData) {
+    this.lastExportData = { title, ...exportData };
+    this.els.exportBtn.disabled = false;
+  }
+
+  /**
+   * Triggers the CSV export process.
+   */
+  handleExport() {
+    if (!this.lastExportData) return;
+    
+    const csvContent = this.exporter.generateCSVString(
+      this.lastExportData.headers, 
+      this.lastExportData.rows
+    );
+    
+    this.exporter.download(csvContent, `nbp-analysis-${this.lastExportData.title}`);
+  }
+
+
   initListeners() {
     this.els.tableType.addEventListener("change", () => this.populateCurrencies());
     this.els.analysisType.addEventListener("change", () => this.updateFieldVisibility());
     this.els.tabs.forEach((tab) => {
       tab.addEventListener("click", () => this.switchView(tab));
     });
+    this.els.exportBtn.addEventListener("click", () => this.handleExport());
   }
 
   /**
