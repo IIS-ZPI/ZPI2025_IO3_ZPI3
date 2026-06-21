@@ -393,3 +393,98 @@ class CSVExporter {
 if (typeof module !== 'undefined') {
   module.exports = { NBPService, NBPServiceError, AnalysisService, CurrencyAnalyzer, CSVExporter };
 }
+
+/**
+ * UI Controller for managing the frontend interactions and view states.
+ */
+class UIController {
+  constructor() {
+    this.els = {
+      analysisType: document.getElementById("analysisType"),
+      tableType: document.getElementById("tableType"),
+      currency: document.getElementById("currency"),
+      currencyB: document.getElementById("currencyB"),
+      currencyBWrap: document.getElementById("currencyBWrap"),
+      period: document.getElementById("period"),
+      startDate: document.getElementById("startDate"),
+      startDateWrap: document.getElementById("startDateWrap"),
+      distGran: document.getElementById("distGran"),
+      distGranWrap: document.getElementById("distGranWrap"),
+      runBtn: document.getElementById("runBtn"),
+      exportBtn: document.getElementById("exportBtn"),
+      status: document.getElementById("status"),
+      results: document.getElementById("results"),
+      tabs: document.querySelectorAll(".tab"),
+      chartWrap: document.getElementById("chartWrap"),
+      tableWrap: document.getElementById("tableWrap")
+    };
+
+    this.CURRENCIES = {
+      A: [["USD", "US Dollar"], ["EUR", "Euro"], ["GBP", "British Pound"], ["CHF", "Swiss Franc"]],
+      B: [["BGN", "Bulgarian Lev"], ["BRL", "Brazilian Real"], ["INR", "Indian Rupee"]],
+      C: [["USD", "US Dollar"], ["EUR", "Euro"], ["GBP", "British Pound"]]
+    };
+
+    this.initListeners();
+    this.populateCurrencies();
+  }
+
+  /**
+   * Populates the currency dropdowns based on the selected NBP table.
+   */
+  populateCurrencies() {
+    const list = this.CURRENCIES[this.els.tableType.value] || this.CURRENCIES.A;
+    this.els.currency.innerHTML = "";
+    this.els.currencyB.innerHTML = "";
+    list.forEach(([code, name]) => {
+      this.els.currency.add(new Option(`${code} — ${name}`, code));
+      this.els.currencyB.add(new Option(`${code} — ${name}`, code));
+    });
+  }
+
+  /**
+   * Toggles visibility of input fields based on analysis type.
+   */
+  updateFieldVisibility() {
+    const type = this.els.analysisType.value;
+    const isDist = type === "distribution";
+    const isGold = type === "gold";
+
+    this.els.currencyBWrap.hidden = !isDist;
+    this.els.startDateWrap.hidden = !isDist;
+    this.els.distGranWrap.hidden = !isDist;
+    this.els.period.parentElement.hidden = isDist;
+    document.getElementById("nbpTableWrap").hidden = isGold;
+    document.getElementById("currencyWrap").hidden = isGold;
+  }
+
+  /**
+   * Handles tab switching between Chart and Table views.
+   */
+  switchView(tab) {
+    this.els.tabs.forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    const view = tab.dataset.view;
+    this.els.chartWrap.hidden = view !== "chart";
+    this.els.tableWrap.hidden = view !== "table";
+  }
+
+  /**
+   * Sets the status message and loading state.
+   */
+  setStatus(msg, isError = false) {
+    this.els.status.textContent = msg;
+    this.els.status.style.color = isError ? "#dc2626" : "#64748b";
+  }
+
+  initListeners() {
+    this.els.tableType.addEventListener("change", () => this.populateCurrencies());
+    this.els.analysisType.addEventListener("change", () => this.updateFieldVisibility());
+    this.els.tabs.forEach(tab => {
+      tab.addEventListener("click", () => this.switchView(tab));
+    });
+  }
+}
+
+// Initialize UI
+const ui = new UIController();
