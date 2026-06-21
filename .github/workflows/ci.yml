@@ -1,0 +1,25 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "release", "develop" ]
+  pull_request:
+    branches: [ "main", "release", "develop" ]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get code from repository
+        uses: actions/checkout@v4
+
+      - name: Node.js configuration
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Dependencies installation
+        run: npm install
+
+      - name: Run unit tests
+        run: npm test
