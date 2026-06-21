@@ -10,13 +10,22 @@ class NBPServiceError extends Error {
 }
 
 /**
- * Service class to handle all communication with the NBP API.
+ * Service class to handle all communication with the National Bank of Poland API.
  */
 class NBPService {
   constructor() {
     this.baseUrl = "https://api.nbp.pl/api";
     this.MIN_DATE = "2002-01-02";
     this.GOLD_MIN_DATE = "2013-01-02";
+  }
+
+  /**
+   * Helper to round numbers to 4 decimal places as per requirements.
+   * @param {number} val - Value to round.
+   * @returns {number} Rounded value.
+   */
+  round(val) {
+    return Math.round((val + Number.EPSILON) * 10000) / 10000;
   }
 
   /**
@@ -50,20 +59,19 @@ class NBPService {
     }
     
     const json = await res.json();
-    return json.rates.map((r) => ({
-      date: r.effectiveDate,
-      // For Table C, we calculate a mid-equivalent by averaging bid and ask
-      value: r.mid != null ? r.mid : (r.bid + r.ask) / 2,
-      bid: r.bid,
-      ask: r.ask,
-    }));
+    return json.rates.map((r) => {
+      const rawValue = r.mid != null ? r.mid : (r.bid + r.ask) / 2;
+      return {
+        date: r.effectiveDate,
+        value: this.round(rawValue),
+        bid: r.bid,
+        ask: r.ask,
+      };
+    });
   }
 
   /**
    * Fetches gold prices for a given range.
-   * @param {string} startDate - Range start.
-   * @param {string} endDate - Range end.
-   * @returns {Promise<Array>} Array of gold price objects.
    */
   async fetchGold(startDate, endDate) {
     const url = `${this.baseUrl}/cenyzlota/${startDate}/${endDate}/?format=json`;
@@ -77,16 +85,14 @@ class NBPService {
     }
     
     const json = await res.json();
-    return json.map((r) => ({ date: r.data, value: r.cena }));
+    return json.map((r) => ({ 
+      date: r.data, 
+      value: this.round(r.cena) 
+    }));
   }
 
   /**
    * Fetches data in chunks to bypass NBP API's 367-day limit.
-   * @param {string} table - NBP table.
-   * @param {string} code - Currency code.
-   * @param {string} startStr - Start date.
-   * @param {string} endStr - End date.
-   * @returns {Promise<Array>} Deduplicated rates.
    */
   async fetchRangeChunked(table, code, startStr, endStr) {
     const out = [];
@@ -110,7 +116,6 @@ class NBPService {
   }
 }
 
-// Export for tests
 if (typeof module !== 'undefined') {
   module.exports = { NBPService, NBPServiceError };
 }
