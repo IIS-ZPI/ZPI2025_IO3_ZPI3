@@ -250,3 +250,88 @@ describe('CSVExporter Tests', () => {
     expect(result).toBe(expected);
   });
 });
+
+const { UIController } = require('./app.js');
+
+describe('End-to-End User Flow Simulation', () => {
+  let ui;
+
+  beforeEach(() => {
+    // Setup minimal DOM required for the controller
+    document.body.innerHTML = `
+      <select id="analysisType"><option value="stats">Stats</option></select>
+      <select id="tableType"><option value="A">A</option></select>
+      <select id="currency"></select><select id="currencyB"></select>
+      <select id="period"><option value="30">30</option></select>
+      <input type="date" id="startDate">
+      <select id="distGran"><option value="monthly">Monthly</option></select>
+      <button id="runBtn">Run</button><button id="exportBtn" disabled>Export</button>
+      <div id="status"></div><div id="results" hidden>
+        <div id="resultsTitle"></div><p id="meta"></p>
+        <div class="tab" data-view="chart"></div><div class="tab" data-view="table"></div>
+        <div id="chartWrap"></div><div id="tableWrap" hidden></div>
+        <canvas id="chart"></canvas>
+      </div>
+      <div id="nbpTableWrap"></div><div id="currencyWrap"></div>
+      <div id="currencyBWrap"></div><div id="startDateWrap"></div>
+      <div id="distGranWrap"></div>
+    `;
+
+    // Mock Canvas getContext to prevent errors in JSDOM
+    HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+      clearRect: jest.fn(),
+      beginPath: jest.fn(),
+      moveTo: jest.fn(),
+      lineTo: jest.fn(),
+      stroke: jest.fn(),
+      fillText: jest.fn(),
+      fillRect: jest.fn(),
+    }));
+    
+    global.fetch = jest.fn();
+    ui = new UIController();
+  });
+
+  test('Flow: User selects currency, runs analysis, and views statistical results', async () => {
+    // Mock API Success
+    fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        rates: [
+          { effectiveDate: '2023-01-01', mid: 4.0 },
+          { effectiveDate: '2023-01-02', mid: 4.2 }
+        ]
+      })
+    });
+
+    // EXECUTE: User clicks Run
+    await ui.run();
+
+    // VALIDATE: Results are visible and processed
+    expect(ui.els.results.hidden).toBe(false);
+    expect(ui.els.status.textContent).toBe('Success.');
+    
+    // Check if Statistical Cards were rendered
+    const statCards = document.querySelectorAll('.stat-card');
+    expect(statCards.length).toBeGreaterThan(0);
+    
+    // VALIDATE: Export button is now enabled
+    expect(ui.els.exportBtn.disabled).toBe(false);
+  });
+
+  test('Flow: User toggles between Chart and Table views', () => {
+    const chartTab = document.querySelector('.tab[data-view="chart"]');
+    const tableTab = document.querySelector('.tab[data-view="table"]');
+
+    // Default state: Chart visible, Table hidden
+    expect(ui.els.chartWrap.hidden).toBe(false);
+    expect(ui.els.tableWrap.hidden).toBe(true);
+
+    // EXECUTE: Click Table tab
+    ui.switchView(tableTab);
+
+    // VALIDATE: Table visible, Chart hidden
+    expect(ui.els.chartWrap.hidden).toBe(true);
+    expect(ui.els.tableWrap.hidden).toBe(false);
+  });
+});
