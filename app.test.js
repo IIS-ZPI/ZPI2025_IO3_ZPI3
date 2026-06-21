@@ -171,3 +171,49 @@ describe('AnalysisService Distribution Analysis Tests', () => {
     expect(totalCount).toBe(10);
   });
 });
+
+const { CurrencyAnalyzer } = require('./app.js');
+
+describe('CurrencyAnalyzer Integration Tests', () => {
+  let analyzer;
+
+  beforeEach(() => {
+    analyzer = new CurrencyAnalyzer();
+    global.fetch = jest.fn();
+  });
+
+  test('Full flow: getStatistics should fetch and analyze data', async () => {
+    // Mock API response
+    fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        rates: [
+          { effectiveDate: '2023-01-01', mid: 4.0 },
+          { effectiveDate: '2023-01-02', mid: 5.0 }
+        ]
+      })
+    });
+
+    const result = await analyzer.getStatistics('A', 'USD', '2023-01-01', '2023-01-02');
+
+    expect(result.rates.length).toBe(2);
+    expect(result.stats.mean).toBe(4.5);
+    expect(result.stats.max).toBe(5.0);
+  });
+
+  test('Full flow: getDistribution should handle parallel fetching and processing', async () => {
+    // Mock two successful API calls
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ rates: [{ effectiveDate: '2023-01-01', mid: 4.0 }, { effectiveDate: '2023-02-01', mid: 4.4 }] })
+    }).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ rates: [{ effectiveDate: '2023-01-01', mid: 1.0 }, { effectiveDate: '2023-02-01', mid: 1.0 }] })
+    });
+
+    const dist = await analyzer.getDistribution('A', 'USD', 'EUR', '2023-01-01', '2023-02-01', 'monthly');
+    
+    expect(dist.changes.length).toBe(1);
+    expect(dist.changes[0].change).toBe(10); // 4.4/1.0 vs 4.0/1.0 = +10%
+  });
+});
