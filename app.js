@@ -235,6 +235,72 @@ class AnalysisService {
 
     return { up, down, flat, rows };
   }
+
+  /**
+   * Analyzes the distribution of percentage changes for a currency pair.
+   * Logic: Synchronizes dates, calculates cross-rates, groups by period, 
+   * calculates delta %, and bins results for a histogram.
+   * 
+   * @param {Array} ratesA - Rates for the first currency.
+   * @param {Array} ratesB - Rates for the second currency.
+   * @param {string} granularity - 'monthly' or 'quarterly'.
+   * @returns {Object} Changes list and histogram bins.
+   */
+  analyzeDistribution(ratesA, ratesB, granularity) {
+    // 1. Synchronize dates and calculate cross-rate (A/B)
+    const mapB = new Map(ratesB.map((r) => [r.date, r.value]));
+    const merged = ratesA
+      .filter((r) => mapB.has(r.date))
+      .map((r) => ({ 
+        date: r.date, 
+        value: r.value / mapB.get(r.date) 
+      }));
+
+    // 2. Group by month or quarter and take the last observation of each period
+    const buckets = new Map();
+    for (const r of merged) {
+      const d = new Date(r.date);
+      const key = granularity === "monthly"
+        ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+        : `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`;
+      buckets.set(key, r.value); // Overwrites until the last day of the period is reached
+    }
+
+    // 3. Sort periods and calculate percentage changes between them
+    const ordered = [...buckets.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    const changes = [];
+    for (let i = 1; i < ordered.length; i++) {
+      const prev = ordered[i - 1][1];
+      const cur = ordered[i][1];
+      const pct = ((cur - prev) / prev) * 100;
+      changes.push({ period: ordered[i][0], change: this.round(pct) });
+    }
+
+    if (!changes.length) return { changes, bins: [] };
+
+    // 4. Generate Histogram Bins (10 intervals)
+    const values = changes.map((c) => c.change);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const binCount = 10;
+    const range = max - min || 1;
+    const step = range / binCount;
+
+    const bins = Array.from({ length: binCount }, (_, i) => ({
+      from: this.round(min + i * step),
+      to: this.round(min + (i + 1) * step),
+      count: 0,
+    }));
+
+    // 5. Assign changes to bins
+    for (const c of changes) {
+      let idx = Math.floor((c.change - min) / step);
+      if (idx >= binCount) idx = binCount - 1; // Handle edge case of the max value
+      bins[idx].count++;
+    }
+
+    return { changes, bins };
+  }
 }
 
 if (typeof module !== 'undefined') {
