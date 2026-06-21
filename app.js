@@ -1,63 +1,116 @@
-//modify code after app is written, I wrote easier functions myself to test them properly
-//no need to write comments like me, but I guess they would help the person doing final doc
-
+/**
+ * Custom error class for NBP API related issues.
+ */
+class NBPServiceError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.name = "NBPServiceError";
+    this.status = status;
+  }
+}
 
 /**
- * Calculates median from given array of numbers.
- * @param arr - Array of numbers to calculate median form.
- * @returns {number|*} - Median value, or 0 if empty
+ * Service class to handle all communication with the NBP API.
  */
-function median(arr) {
-    if (!arr || arr.length === 0) {
-        return 0;
+class NBPService {
+  constructor() {
+    this.baseUrl = "https://api.nbp.pl/api";
+    this.MIN_DATE = "2002-01-02";
+    this.GOLD_MIN_DATE = "2013-01-02";
+  }
+
+  /**
+   * Formats a Date object to YYYY-MM-DD string.
+   * @param {Date} date - Date object.
+   * @returns {string} Formatted date.
+   */
+  formatDate(date) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  /**
+   * Fetches exchange rates for a given currency and range.
+   * @param {string} table - NBP table (A, B, or C).
+   * @param {string} code - Currency code.
+   * @param {string} startDate - Range start (YYYY-MM-DD).
+   * @param {string} endDate - Range end (YYYY-MM-DD).
+   * @returns {Promise<Array>} Array of rate objects.
+   */
+  async fetchRates(table, code, startDate, endDate) {
+    const t = (table || "A").toLowerCase();
+    const url = `${this.baseUrl}/exchangerates/rates/${t}/${code.toLowerCase()}/${startDate}/${endDate}/?format=json`;
+    
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      if (res.status === 404) {
+        throw new NBPServiceError(`No data for ${code} in selected range.`, 404);
+      }
+      throw new NBPServiceError(`NBP API error for ${code}.`, res.status);
     }
-    const s = [...arr].sort((a, b) => a - b); //s - sorted copy of array
-    const m = Math.floor(s.length / 2); // m - middle index of array
-    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
-}
+    
+    const json = await res.json();
+    return json.rates.map((r) => ({
+      date: r.effectiveDate,
+      // For Table C, we calculate a mid-equivalent by averaging bid and ask
+      value: r.mid != null ? r.mid : (r.bid + r.ask) / 2,
+      bid: r.bid,
+      ask: r.ask,
+    }));
+  }
 
-/**
- * Calculates average value, and standard deviation from given array of numbers.
- * @param arr - Array of numbers that the calculations will be done on.
- * @returns {{mean: number, std: number}} - Object containing both mean and standard deviation value.
- */
-function stddev(arr) {
-    if (!arr || arr.length === 0) return {mean: 0, std: 0};
-    const m = arr.reduce((a, b) => a + b, 0) / arr.length;
-    const v = arr.reduce((a, b) => a + (b - m) * (b - m), 0) / arr.length;
-    return {mean: m, std: Math.sqrt(v)};
-}
-
-/**
- * Finds most frequent value in a number array.
- * @param arr - Array of numbers to process.
- * @returns {{value: number, count: number}} - Object containing most frequent value and it's count.
- */
-function mode(arr) {
-    //TODO: !!!ADD WORKING CODE, THIS IS JUST A MOCKUP FOR TESTS
-    return {value: 5, count: 3};
-}
-
-/**
- * Analyzes sessions to check difference of values.
- * @param rates - Array of objects (date, value) with data to process.
- * @returns {{up: number, down: number, flat: number, rows: [{date: string, value: number, diff: number, cls: string}]}} - How many times currency went up, went down, stayed the same, array with currency data (date, it's corresponding value, difference from yesterday, and information if it grew, shrink or stayed)
- */
-function analyzeSessions(rates) {
-    //TODO: Write actual working code here, as code below only provides mockup data.
-    return {
-        up: 1,//currency went up once
-        down: 1,//currency went down once
-        flat: 1,//currenct didnt change once
-        rows: [
-            {date: '2023-01-02', value: 4.60, diff: 0.1, cls: 'up'},
-            {date: '2023-01-03', value: 4.40, diff: -0.2, cls: 'down'},
-            {date: '2023-01-04', value: 4.40, diff: 0.0, cls: 'flat'}
-        ]
+  /**
+   * Fetches gold prices for a given range.
+   * @param {string} startDate - Range start.
+   * @param {string} endDate - Range end.
+   * @returns {Promise<Array>} Array of gold price objects.
+   */
+  async fetchGold(startDate, endDate) {
+    const url = `${this.baseUrl}/cenyzlota/${startDate}/${endDate}/?format=json`;
+    const res = await fetch(url);
+    
+    if (!res.ok) {
+      if (res.status === 404) {
+        throw new NBPServiceError("No gold price data in selected range.", 404);
+      }
+      throw new NBPServiceError("NBP API error for gold prices.", res.status);
     }
+    
+    const json = await res.json();
+    return json.map((r) => ({ date: r.data, value: r.cena }));
+  }
+
+  /**
+   * Fetches data in chunks to bypass NBP API's 367-day limit.
+   * @param {string} table - NBP table.
+   * @param {string} code - Currency code.
+   * @param {string} startStr - Start date.
+   * @param {string} endStr - End date.
+   * @returns {Promise<Array>} Deduplicated rates.
+   */
+  async fetchRangeChunked(table, code, startStr, endStr) {
+    const out = [];
+    let s = new Date(startStr);
+    const end = new Date(endStr);
+    
+    while (s <= end) {
+      const chunkEnd = new Date(s);
+      chunkEnd.setDate(chunkEnd.getDate() + 360);
+      const e = chunkEnd > end ? end : chunkEnd;
+      
+      const part = await this.fetchRates(table, code, this.formatDate(s), this.formatDate(e));
+      out.push(...part);
+      
+      s = new Date(e);
+      s.setDate(s.getDate() + 1);
+    }
+    
+    const seen = new Set();
+    return out.filter((r) => (seen.has(r.date) ? false : (seen.add(r.date), true)));
+  }
 }
 
-//export for testing purposes,
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {median, stddev, mode, analyzeSessions};
+// Export for tests
+if (typeof module !== 'undefined') {
+  module.exports = { NBPService, NBPServiceError };
 }
