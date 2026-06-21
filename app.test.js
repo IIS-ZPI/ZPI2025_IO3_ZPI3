@@ -1,4 +1,8 @@
-const { NBPService, NBPServiceError } = require('./app.js');
+/**
+ * @jest-environment jsdom
+ */
+
+const { NBPService, NBPServiceError, AnalysisService, CurrencyAnalyzer, CSVExporter, UIController } = require('./app.js');
 
 global.fetch = jest.fn();
 
@@ -39,8 +43,6 @@ describe('NBPService Class Tests', () => {
         }
     });
 });
-
-const { AnalysisService } = require('./app.js');
 
 describe('AnalysisService Session Tests', () => {
   let analyzer;
@@ -172,8 +174,6 @@ describe('AnalysisService Distribution Analysis Tests', () => {
   });
 });
 
-const { CurrencyAnalyzer } = require('./app.js');
-
 describe('CurrencyAnalyzer Integration Tests', () => {
   let analyzer;
 
@@ -218,8 +218,6 @@ describe('CurrencyAnalyzer Integration Tests', () => {
   });
 });
 
-const { CSVExporter } = require('./app.js');
-
 describe('CSVExporter Tests', () => {
   let exporter;
 
@@ -251,16 +249,21 @@ describe('CSVExporter Tests', () => {
   });
 });
 
-/**
- * @jest-environment jsdom
- */
-
-const { UIController } = require('./app.js');
-
 describe('End-to-End User Flow Simulation', () => {
   let ui;
 
   beforeEach(() => {
+    // Mock Canvas getContext to prevent errors in JSDOM
+    HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+      clearRect: jest.fn(),
+      beginPath: jest.fn(),
+      moveTo: jest.fn(),
+      lineTo: jest.fn(),
+      stroke: jest.fn(),
+      fillText: jest.fn(),
+      fillRect: jest.fn(),
+    }));
+
     // Setup minimal DOM required for the controller
     document.body.innerHTML = `
       <select id="analysisType"><option value="stats">Stats</option></select>
@@ -280,17 +283,6 @@ describe('End-to-End User Flow Simulation', () => {
       <div id="currencyBWrap"></div><div id="startDateWrap"></div>
       <div id="distGranWrap"></div>
     `;
-
-    // Mock Canvas getContext to prevent errors in JSDOM
-    HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
-      clearRect: jest.fn(),
-      beginPath: jest.fn(),
-      moveTo: jest.fn(),
-      lineTo: jest.fn(),
-      stroke: jest.fn(),
-      fillText: jest.fn(),
-      fillRect: jest.fn(),
-    }));
     
     global.fetch = jest.fn();
     ui = new UIController();
