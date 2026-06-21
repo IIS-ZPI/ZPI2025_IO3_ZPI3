@@ -28,6 +28,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: minor
           release_branches: release
+          tag_prefix: ""
 
       - name: Create release on GitHub
         uses: softprops/action-gh-release@v2
