@@ -303,6 +303,55 @@ class AnalysisService {
   }
 }
 
+/**
+ * Main Facade class that provides a consolidated interface for all currency analysis use cases.
+ * Implements UC-001, UC-002, and UC-003.
+ */
+class CurrencyAnalyzer {
+  constructor() {
+    this.nbpService = new NBPService();
+    this.analysisService = new AnalysisService();
+  }
+
+  /**
+   * UC-001: Orchestrates the analysis of trading sessions.
+   */
+  async getSessionAnalysis(table, code, startDate, endDate) {
+    const rates = await this.nbpService.fetchRates(table, code, startDate, endDate);
+    if (rates.length < 2) throw new Error("Not enough data points for session analysis.");
+    return this.analysisService.analyzeSessions(rates);
+  }
+
+  /**
+   * UC-002: Orchestrates the calculation of statistical measures.
+   */
+  async getStatistics(table, code, startDate, endDate) {
+    const rates = await this.nbpService.fetchRates(table, code, startDate, endDate);
+    return {
+      rates,
+      stats: this.analysisService.analyzeStats(rates)
+    };
+  }
+
+  /**
+   * UC-003: Orchestrates cross-rate distribution analysis.
+   */
+  async getDistribution(table, codeA, codeB, startDate, endDate, granularity) {
+    if (codeA === codeB) throw new Error("Pick two different currencies for the pair.");
+    
+    // Parallel fetching for performance
+    const [ratesA, ratesB] = await Promise.all([
+      this.nbpService.fetchRangeChunked(table, codeA, startDate, endDate),
+      this.nbpService.fetchRangeChunked(table, codeB, startDate, endDate)
+    ]);
+
+    const distribution = this.analysisService.analyzeDistribution(ratesA, ratesB, granularity);
+    if (!distribution.changes.length) throw new Error("Not enough data to compute distribution changes.");
+    
+    return distribution;
+  }
+}
+
 if (typeof module !== 'undefined') {
-  module.exports = { NBPService, NBPServiceError, AnalysisService };
+  module.exports = { NBPService, NBPServiceError, AnalysisService, CurrencyAnalyzer };
 }
