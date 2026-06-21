@@ -755,7 +755,7 @@ class UIController {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { NBPService, NBPServiceError, AnalysisService, CurrencyAnalyzer, CSVExporter };
+  module.exports = { NBPService, NBPServiceError, AnalysisService, CurrencyAnalyzer, CSVExporter, UIController };
 }
 
 // Only instantiate in the browser
