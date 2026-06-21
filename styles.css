@@ -37,6 +37,23 @@ body {
 .brand h1 { font-size: 1.5rem; color: var(--primary); }
 .subtitle { color: var(--text-muted); font-size: 0.875rem; }
 
+.actions {
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 /* Panels */
 .panel {
   background: var(--panel-bg);
@@ -44,7 +61,7 @@ body {
   padding: 1.5rem;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
 }
 
 h2 { font-size: 1.125rem; margin-bottom: 1.25rem; border-left: 4px solid var(--primary); padding-left: 10px; }
