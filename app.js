@@ -390,15 +390,15 @@ class CSVExporter {
   }
 }
 
-if (typeof module !== 'undefined') {
-  module.exports = { NBPService, NBPServiceError, AnalysisService, CurrencyAnalyzer, CSVExporter };
-}
-
 /**
  * UI Controller for managing the frontend interactions and view states.
  */
 class UIController {
   constructor() {
+    // Only initialize if document exists (prevents test crashes)
+    if (typeof document === 'undefined') 
+        return;
+
     this.els = {
       analysisType: document.getElementById("analysisType"),
       tableType: document.getElementById("tableType"),
@@ -416,26 +416,57 @@ class UIController {
       results: document.getElementById("results"),
       tabs: document.querySelectorAll(".tab"),
       chartWrap: document.getElementById("chartWrap"),
-      tableWrap: document.getElementById("tableWrap")
+      tableWrap: document.getElementById("tableWrap"),
+      nbpTableWrap: document.getElementById("nbpTableWrap"),
+      currencyWrap: document.getElementById("currencyWrap")
     };
 
-    this.CURRENCIES = {
-      A: [["USD", "US Dollar"], ["EUR", "Euro"], ["GBP", "British Pound"], ["CHF", "Swiss Franc"]],
-      B: [["BGN", "Bulgarian Lev"], ["BRL", "Brazilian Real"], ["INR", "Indian Rupee"]],
-      C: [["USD", "US Dollar"], ["EUR", "Euro"], ["GBP", "British Pound"]]
-    };
+    this.CURRENCIES_A = [
+      ["USD","US Dollar"],["EUR","Euro"],["GBP","British Pound"],["CHF","Swiss Franc"],
+      ["JPY","Japanese Yen"],["CZK","Czech Koruna"],["SEK","Swedish Krona"],
+      ["NOK","Norwegian Krone"],["DKK","Danish Krone"],["CAD","Canadian Dollar"],
+      ["AUD","Australian Dollar"],["HUF","Hungarian Forint"],["CNY","Chinese Yuan"],
+      ["UAH","Ukrainian Hryvnia"],["TRY","Turkish Lira"]
+    ];
+    this.CURRENCIES_B = [
+      ["BGN","Bulgarian Lev"],["BRL","Brazilian Real"],["INR","Indian Rupee"],
+      ["MXN","Mexican Peso"],["ZAR","South African Rand"],["IDR","Indonesian Rupiah"],
+      ["KRW","South Korean Won"],["RON","Romanian Leu"],["THB","Thai Baht"],
+      ["VND","Vietnamese Dong"],["PHP","Philippine Peso"]
+    ];
+    this.CURRENCIES_C = [
+      ["USD","US Dollar"],["EUR","Euro"],["GBP","British Pound"],["CHF","Swiss Franc"]
+    ];
 
     this.initListeners();
     this.populateCurrencies();
+    this.setDefaultDates();
+  }
+
+  /**
+   * Sets the default start date and constraints.
+   */
+  setDefaultDates() {
+    const today = new Date();
+    const oneYearAgo = new Date(today);
+    oneYearAgo.setFullYear(today.getFullYear() - 1);
+    
+    if (this.els.startDate) {
+      this.els.startDate.value = oneYearAgo.toISOString().slice(0, 10);
+      this.els.startDate.max = today.toISOString().slice(0, 10);
+    }
   }
 
   /**
    * Populates the currency dropdowns based on the selected NBP table.
    */
   populateCurrencies() {
-    const list = this.CURRENCIES[this.els.tableType.value] || this.CURRENCIES.A;
+    const t = this.els.tableType.value;
+    const list = t === "B" ? this.CURRENCIES_B : t === "C" ? this.CURRENCIES_C : this.CURRENCIES_A;
+    
     this.els.currency.innerHTML = "";
     this.els.currencyB.innerHTML = "";
+    
     list.forEach(([code, name]) => {
       this.els.currency.add(new Option(`${code} — ${name}`, code));
       this.els.currencyB.add(new Option(`${code} — ${name}`, code));
@@ -443,48 +474,48 @@ class UIController {
   }
 
   /**
-   * Toggles visibility of input fields based on analysis type.
+   * Toggles field visibility based on analysis type.
    */
   updateFieldVisibility() {
-    const type = this.els.analysisType.value;
-    const isDist = type === "distribution";
-    const isGold = type === "gold";
+    const t = this.els.analysisType.value;
+    const isDist = t === "distribution";
+    const isGold = t === "gold";
 
     this.els.currencyBWrap.hidden = !isDist;
     this.els.startDateWrap.hidden = !isDist;
     this.els.distGranWrap.hidden = !isDist;
     this.els.period.parentElement.hidden = isDist;
-    document.getElementById("nbpTableWrap").hidden = isGold;
-    document.getElementById("currencyWrap").hidden = isGold;
+    this.els.nbpTableWrap.hidden = isGold;
+    this.els.currencyWrap.hidden = isGold;
   }
 
-  /**
-   * Handles tab switching between Chart and Table views.
-   */
   switchView(tab) {
-    this.els.tabs.forEach(t => t.classList.remove("active"));
+    this.els.tabs.forEach((t) => t.classList.remove("active"));
     tab.classList.add("active");
-    const view = tab.dataset.view;
-    this.els.chartWrap.hidden = view !== "chart";
-    this.els.tableWrap.hidden = view !== "table";
+    const v = tab.dataset.view;
+    this.els.chartWrap.hidden = v !== "chart";
+    this.els.tableWrap.hidden = v !== "table";
   }
 
-  /**
-   * Sets the status message and loading state.
-   */
   setStatus(msg, isError = false) {
     this.els.status.textContent = msg;
-    this.els.status.style.color = isError ? "#dc2626" : "#64748b";
+    this.els.status.classList.toggle("error", isError);
   }
 
   initListeners() {
     this.els.tableType.addEventListener("change", () => this.populateCurrencies());
     this.els.analysisType.addEventListener("change", () => this.updateFieldVisibility());
-    this.els.tabs.forEach(tab => {
+    this.els.tabs.forEach((tab) => {
       tab.addEventListener("click", () => this.switchView(tab));
     });
   }
 }
 
-// Initialize UI
-const ui = new UIController();
+if (typeof module !== 'undefined') {
+  module.exports = { NBPService, NBPServiceError, AnalysisService, CurrencyAnalyzer, CSVExporter };
+}
+
+// Only instantiate in the browser
+if (typeof window !== 'undefined') {
+  window.ui = new UIController();
+}
