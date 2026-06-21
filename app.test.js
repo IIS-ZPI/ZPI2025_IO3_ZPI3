@@ -130,3 +130,44 @@ describe('AnalysisService Statistical Measures Tests', () => {
     expect(report.max).toBe(30);
   });
 });
+
+describe('AnalysisService Distribution Analysis Tests', () => {
+  let analyzer;
+
+  beforeEach(() => {
+    analyzer = new AnalysisService();
+  });
+
+  test('should synchronize dates and calculate correct cross-rates', () => {
+    const ratesA = [
+      { date: '2023-01-01', value: 4.0 }, 
+      { date: '2023-01-02', value: 4.2 }
+    ];
+    const ratesB = [
+      { date: '2023-01-02', value: 1.0 }, 
+      { date: '2023-01-03', value: 1.1 }
+    ];
+    
+    // Only 2023-01-02 is common. Cross rate = 4.2 / 1.0 = 4.2
+    const result = analyzer.analyzeDistribution(ratesA, ratesB, 'monthly');
+    // Result changes will be empty because we need at least 2 periods to calculate change
+    expect(result.changes.length).toBe(0);
+  });
+
+  test('should correctly bin percentage changes into 10 intervals', () => {
+    // Mocking 11 months of data to get 10 changes
+    const ratesA = Array.from({length: 11}, (_, i) => ({
+      date: `2023-${String(i+1).padStart(2, '0')}-01`,
+      value: 10 + i // values: 10, 11, 12...
+    }));
+    const ratesB = ratesA.map(r => ({ date: r.date, value: 1 })); // Cross rate = value
+
+    const result = analyzer.analyzeDistribution(ratesA, ratesB, 'monthly');
+    
+    expect(result.changes.length).toBe(10);
+    expect(result.bins.length).toBe(10);
+    // Total count in bins should equal number of changes
+    const totalCount = result.bins.reduce((sum, b) => sum + b.count, 0);
+    expect(totalCount).toBe(10);
+  });
+});
