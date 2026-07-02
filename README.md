@@ -50,3 +50,29 @@ The project utilizes **GitHub Actions** to maintain code quality and prevent reg
 
 ## Export Functionality
 Users can export any generated analysis to **CSV** format. The exported file includes timestamped data and follows standard quote-escaping rules for maximum compatibility with Excel/Google Sheets.
+## Deployment
+
+The `release-and-deploy.yml` workflow runs on pushes to the `release` branch and:
+
+1. Auto-generates a semantic version tag and a GitHub Release.
+2. Publishes the static site to **GitHub Pages** (`upload-pages-artifact` → `deploy-pages`).
+
+Because the app is fully static and talks to the NBP API directly over CORS, the
+Pages URL is the production deployment — no server component is required.
+
+> Release tag note: the tagger uses `default_bump: minor`. To emit `v2.0.0`
+> specifically, set `custom_tag: 2.0.0` on the tag step or align it with the
+> `package.json` version.
+
+## Project Backlog & Documentation
+
+- **Product backlog / user stories:** GitHub Projects — _add board link here_
+- **UML (activity, sequence, component):** [`docs/UML.md`](docs/UML.md)
+- **Acceptance test report (SRS deviations, Must/Should/Could):** [`docs/ACCEPTANCE_TEST_REPORT.md`](docs/ACCEPTANCE_TEST_REPORT.md)
+
+## Test Reports
+
+`npm test` runs the Jest suite (29 tests) covering the API layer, statistical and
+session logic, cross-rate/distribution binning, CSV export, and end-to-end UI flows
+(UC-001…UC-004) in a jsdom environment. The same command runs in CI on every push
+and pull request to `main`, `release`, and `develop`.
