@@ -1,110 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NBP Currency Exchange Rate Analyzer</title>
-  <link rel="stylesheet" href="styles.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NBP Currency Exchange Rate Analyzer</title>
+<meta name="description" content="NBP Currency Exchange Rate Analyzer — statistical analysis of Polish zloty exchange rates powered by the National Bank of Poland API." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">NBP</div>
-      <div>
-        <h1>Currency Exchange Rate Analyzer</h1>
-        <p class="subtitle">Statistical analysis powered by the National Bank of Poland API</p>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">NBP</div>
+    <div>
+      <h1>Currency Exchange Rate Analyzer</h1>
+      <p class="subtitle">Statistical analysis powered by the National Bank of Poland API</p>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="panel params">
+    <h2>Analysis Parameters</h2>
+    <div class="grid">
+      <label>
+        <span>Analysis type</span>
+        <select id="analysisType">
+          <option value="sessions">Trading sessions (up / down / unchanged)</option>
+          <option value="stats">Statistical measures (median, mode, std, CV)</option>
+          <option value="distribution">Change distribution (histogram)</option>
+          <option value="gold">Gold price analysis (sessions + stats)</option>
+        </select>
+      </label>
+
+      <label id="nbpTableWrap">
+        <span>NBP table</span>
+        <select id="tableType">
+          <option value="A" selected>A — major currencies (mid)</option>
+          <option value="B">B — other currencies (mid)</option>
+          <option value="C">C — bid / ask</option>
+        </select>
+      </label>
+
+      <label id="currencyWrap">
+        <span>Currency</span>
+        <select id="currency"></select>
+      </label>
+
+      <label id="currencyBWrap" hidden>
+        <span>Second currency — pair</span>
+        <select id="currencyB"></select>
+      </label>
+
+      <label>
+        <span>Period</span>
+        <select id="period">
+          <option value="7">1 week</option>
+          <option value="14">2 weeks</option>
+          <option value="30" selected>1 month</option>
+          <option value="90">1 quarter</option>
+          <option value="180">Half year</option>
+          <option value="365">1 year</option>
+        </select>
+      </label>
+
+      <label id="startDateWrap" hidden>
+        <span>Start date</span>
+        <input type="date" id="startDate" />
+      </label>
+
+      <label id="distGranWrap" hidden>
+        <span>Distribution interval</span>
+        <select id="distGran">
+          <option value="monthly" selected>Monthly changes</option>
+          <option value="quarterly">Quarterly changes</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button id="runBtn" class="btn primary">Run analysis</button>
+      <button id="exportBtn" class="btn ghost" disabled>Export CSV</button>
+      <span id="status" class="status"></span>
+    </div>
+  </section>
+
+  <section id="results" class="panel results" hidden>
+    <div class="results-header">
+      <h2 id="resultsTitle">Results</h2>
+      <div class="tabs">
+        <button class="tab active" data-view="chart">Chart</button>
+        <button class="tab" data-view="table">Table</button>
       </div>
     </div>
-  </header>
+    <div id="meta" class="meta-badges"></div>
 
-  <main class="container">
-    <!-- Parameters Section -->
-    <section class="panel params">
-      <h2>Analysis Parameters</h2>
-      <div class="grid">
-        <label>
-          <span>Analysis type</span>
-          <select id="analysisType">
-            <option value="sessions">Trading sessions (up / down / unchanged)</option>
-            <option value="stats">Statistical measures (median, mode, std, CV)</option>
-            <option value="distribution">Change distribution (histogram)</option>
-            <option value="gold">Gold price analysis (sessions + stats)</option>
-          </select>
-        </label>
+    <!-- Current rate bar with 24h change (S2-06) -->
+    <div id="currentRateBar" class="rate-bar" hidden></div>
 
-        <label id="nbpTableWrap">
-          <span>NBP table</span>
-          <select id="tableType">
-            <option value="A" selected>A — major currencies (mid)</option>
-            <option value="B">B — other currencies (mid)</option>
-            <option value="C">C — bid / ask</option>
-          </select>
-        </label>
+    <!-- Session cards + statistical cards (S2-07 / S2-09) -->
+    <div id="dashboard" class="dashboard"></div>
 
-        <label id="currencyWrap">
-          <span>Currency</span>
-          <select id="currency"></select>
-        </label>
+    <!-- Chart legend removed (redundant) -->
 
-        <label id="currencyBWrap" hidden>
-          <span>Second currency (pair)</span>
-          <select id="currencyB"></select>
-        </label>
+    <div id="chartWrap" class="chart-wrap">
+      <canvas id="chart" width="900" height="380"></canvas>
+      <div id="chartTooltip" class="chart-tooltip" hidden></div>
+    </div>
 
-        <label>
-          <span>Period</span>
-          <select id="period">
-            <option value="7">1 week</option>
-            <option value="14">2 weeks</option>
-            <option value="30" selected>1 month</option>
-            <option value="90">1 quarter</option>
-            <option value="180">Half year</option>
-            <option value="365">1 year</option>
-          </select>
-        </label>
+    <div id="tableWrap" class="table-wrap" hidden></div>
+  </section>
+</main>
 
-        <label id="startDateWrap" hidden>
-          <span>Start date</span>
-          <input type="date" id="startDate" />
-        </label>
+<footer class="footer">
+  Data source: <a href="https://api.nbp.pl/" target="_blank" rel="noreferrer">api.nbp.pl</a>
+</footer>
 
-        <label id="distGranWrap" hidden>
-          <span>Distribution interval</span>
-          <select id="distGran">
-            <option value="monthly" selected>Monthly changes</option>
-            <option value="quarterly">Quarterly changes</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="actions">
-        <button id="runBtn" class="btn primary">Run analysis</button>
-        <button id="exportBtn" class="btn ghost" disabled>Export CSV</button>
-        <span id="status" class="status"></span>
-      </div>
-    </section>
-
-    <!-- Results Section -->
-    <section id="results" class="panel results" hidden>
-      <div class="results-header">
-        <h2 id="resultsTitle">Results</h2>
-        <div class="tabs">
-          <button class="tab active" data-view="chart">Chart</button>
-          <button class="tab" data-view="table">Table</button>
-        </div>
-      </div>
-      <p id="meta" class="meta"></p>
-      <div id="chartWrap" class="chart-wrap">
-        <canvas id="chart" width="900" height="380"></canvas>
-      </div>
-      <div id="tableWrap" class="table-wrap" hidden></div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    Data source: <a href="http://api.nbp.pl/" target="_blank" rel="noreferrer">api.nbp.pl</a>
-  </footer>
-
-  <script src="app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

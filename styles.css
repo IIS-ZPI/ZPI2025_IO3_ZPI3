@@ -1,7 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 /* Modern Reset & Variables */
 :root {
-  --primary: #b91c1c; /* NBP Red */
-  --primary-hover: #991b1b;
+  --primary: #be123c; /* Softer rose red */
+  --primary-hover: #9f1239;
   --bg: #f8fafc;
   --panel-bg: #ffffff;
   --text-main: #0f172a;
@@ -9,7 +11,19 @@
   --border: #e2e8f0;
   --radius: 8px;
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+
+  /* Color tokens used across dashboard & charts */
+  --up:     #10b981; /* emerald  — upward sessions  */
+  --down:   #f43f5e; /* rose    — downward sessions */
+  --flat:   #94a3b8; /* slate   — unchanged         */
+  --line:   #e2e8f0; /* border / grid lines        */
+  --muted:  #64748b; /* secondary text             */
+  --ink:    #0f172a; /* primary text               */
+  --accent: #be123c; /* icon accent (matches brand)*/
 }
+
+/* Ensure the HTML 'hidden' attribute is never overridden by author CSS display rules */
+[hidden] { display: none !important; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -107,29 +121,36 @@ select, input {
 .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
 .btn.ghost:hover { background: #f1f5f9; }
 
-/* Tabs */
-.tabs { display: flex; gap: 0.5rem; }
-.tab {
-  padding: 0.5rem 1rem;
+/* Tabs Segmented Control */
+.tabs {
+  display: inline-flex;
   background: #f1f5f9;
+  padding: 4px;
+  border-radius: 8px;
+  gap: 2px;
+}
+.tab {
+  padding: 0.5rem 1.25rem;
+  background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.875rem;
-}
-.tab.active { background: var(--primary); color: white; }
-
-/* Data Dashboard Elements */
-.session-summary { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
-.chip {
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
   font-weight: 500;
-  background: #f1f5f9;
+  color: var(--text-muted);
+  transition: all 0.2s;
 }
-.chip.up { color: #16a34a; border: 1px solid #bcf0da; }
-.chip.down { color: #dc2626; border: 1px solid #fecaca; }
+.tab:hover {
+  color: var(--text-main);
+}
+.tab.active {
+  background: #ffffff;
+  color: var(--text-main);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+
+
 
 .stat-grid {
   display: grid;
@@ -158,3 +179,102 @@ td { padding: 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.875r
 .footer {
   text-align: center;
 }
+
+/* ---------- Additions: rate bar, dashboard cards, legend, tooltip, skeleton ---------- */
+
+.chart-wrap { position: relative; }
+
+/* Current rate bar (S2-06) */
+.rate-bar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 16px; margin: 4px 0 16px;
+  padding: 16px 20px; border-radius: 12px;
+  background: #ffffff; border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.rate-main { display: flex; flex-direction: column; gap: 2px; }
+.rate-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.rate-value { font-size: 34px; font-weight: 800; line-height: 1; color: var(--ink); }
+.rate-change { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.rate-arrow { font-size: 20px; font-weight: 800; }
+.rate-change.up   .rate-arrow, .rate-change.up   .rate-delta { color: var(--up); }
+.rate-change.down .rate-arrow, .rate-change.down .rate-delta { color: var(--down); }
+.rate-change.flat .rate-arrow, .rate-change.flat .rate-delta { color: var(--flat); }
+.rate-delta { font-size: 18px; font-weight: 700; }
+.rate-sub { font-size: 12px; color: var(--muted); width: 100%; }
+
+/* Results dashboard wrapper */
+.dashboard { display: flex; flex-direction: column; gap: 16px; margin-bottom: 8px; }
+
+/* Session cards with counters + percentages + colours (S2-07) */
+.session-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+.session-card {
+  background: #ffffff; border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.sc-top { display: flex; align-items: center; gap: 8px; }
+.sc-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--flat); }
+.session-card.up   .sc-dot { background: var(--up); }
+.session-card.down .sc-dot { background: var(--down); }
+.sc-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.sc-count { font-size: 28px; font-weight: 800; margin-top: 6px; }
+.sc-pct { font-size: 14px; color: var(--muted); font-weight: 600; }
+
+/* Statistical cards icons (S2-09) */
+.stat-card { position: relative; }
+.stat-icon {
+  position: absolute; top: 12px; right: 14px;
+  width: 26px; height: 26px; border-radius: 7px;
+  display: grid; place-items: center;
+  background: #eef2f7; color: var(--accent);
+  font-size: 14px; font-weight: 800;
+}
+
+/* Chart legend (S2-08) */
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 12px; }
+.legend-item { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink); }
+.legend-dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+/* Meta badges */
+.meta-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+.meta-badge {
+  background: #f1f5f9;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Histogram hover tooltip (S2-10) */
+.chart-tooltip {
+  position: absolute; z-index: 5; pointer-events: none;
+  background: #1e293b; color: #f8fafc; font-size: 12px; line-height: 1.35;
+  padding: 8px 10px; border-radius: 8px; box-shadow: 0 6px 20px -8px rgba(15,23,42,.5);
+  max-width: 220px;
+}
+
+/* Loading skeleton (S2-13) */
+.dashboard .skeleton-card {
+  background: #f8fafc; border: 1px solid var(--line); border-radius: 12px; padding: 16px;
+  display: inline-block; width: 160px; margin-right: 12px;
+}
+.sk-line { height: 12px; border-radius: 6px; background: linear-gradient(90deg,#e9eef5 25%,#f3f6fb 50%,#e9eef5 75%);
+  background-size: 200% 100%; animation: sk 1.2s ease-in-out infinite; }
+.sk-sm { width: 45%; margin-bottom: 12px; }
+.sk-lg { width: 80%; height: 24px; }
+@keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-line { animation: none; }
+}
+
+/* Guard: canvas must never exceed its container (prevents chart drift/overflow) */
+.chart-wrap { max-width: 100%; }
+canvas { max-width: 100%; }
