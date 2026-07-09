@@ -562,6 +562,8 @@ class UIController {
 
     build(this.els.currency, defaultA || "EUR");
     build(this.els.currencyB, defaultB || "USD");
+
+    this.preventDuplicateSelection(); 
   }
 
   /**
@@ -751,10 +753,25 @@ class UIController {
     this.els.tableWrap.innerHTML = html;
   }
 
+  preventDuplicateSelection() {
+    if (!this.els.currency || !this.els.currencyB) 
+      return;
+
+    const selectedA = this.els.currency.value;
+    Array.from(this.els.currencyB.options).forEach(opt => {
+      opt.disabled = (opt.value === selectedA);
+    });
+    
+    if (this.els.currencyB.value === selectedA) {
+      this.els.currencyB.selectedIndex = (this.els.currency.selectedIndex + 1) % this.els.currencyB.options.length;
+    }
+  }
+
   initListeners() {
     this.els.runBtn.addEventListener("click", () => this.run());
     this.els.tableType.addEventListener("change", () => this.populateCurrencies());
     this.els.analysisType.addEventListener("change", () => this.updateFieldVisibility());
+    this.els.currency.addEventListener("change", () => this.preventDuplicateSelection());
     this.els.tabs.forEach((tab) => {
       tab.addEventListener("click", () => this.switchView(tab));
     });
